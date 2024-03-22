@@ -2,6 +2,7 @@ import numpy as np
 from parameters import *
 import matplotlib.pyplot as plt
 from scipy.fft import fftn, ifftn
+import json
 
 class Node():
     def __init__(self,*args):
@@ -30,7 +31,8 @@ class Node():
         if "F" in self.__dict__.keys():
             return self.F
         else:
-            raise ValueError("No value of Flow assigned to the node")
+            print(self.getCoord())
+            raise ValueError(f"No value of Flow assigned to the node")
     def __str__(self) -> str:
         return f"{self.getCoord()}"
     def __eq__(self,other):
@@ -89,23 +91,79 @@ class Vessel():
         return self.finish.getCoord()
 
 class Network():
-    def __init__(self,V:dict,E:dict,C:dict):
-        self.Vertex_list = V
-        self.EdgePoints = E
+    def __init__(self,path):
+        with open(path,"r") as f:
+            network = json.load(f)
+        self.Vertex_list = network['Node_list']
+        self.EdgePoints = network['Vessel_list']
         self.EdgeList = {}
-        for vi,vf in E.items():
-            self.EdgeList[vi] = Vessel(Node(*V[vf[0]]),Node(*V[vf[1]]))
+        for vi,vf in self.EdgePoints.items():
+            self.EdgeList[vi] = Vessel(Node(*self.Vertex_list[vf[0]]),Node(*self.Vertex_list[vf[1]]))
         for key in self.EdgeList.keys():
-            self.EdgeList[key].updateCenterline(C[key])
+            self.EdgeList[key].updateCenterline(network['centerline'][key])
+            self.EdgeList[key].setDiameter(network['Diam'][key])
     def setFathers(self):
         for eid in self.EdgeList.keys():
             for remaining_edges in self.EdgeList.keys():
                 if self.EdgeList[eid].start == self.EdgeList[remaining_edges].finish:
                     self.EdgeList[eid].fathers.append(remaining_edges)
+    def setLengths(self):
+        for vaso in self.EdgeList.values():
+            vaso.setLength()
+    def setResistances(self):
+        for vaso in self.EdgeList.values():
+            vaso.setResistance(128*vaso.getLength()*mu/(np.pi*vaso.getDiameter()**4))
+    def setFluxes(self):
+        node_codex = {}
+        for i,j in zip(self.Vertex_list.keys(),range(len(self.Vertex_list))):
+            node_codex[i]=j
+        adjacency_list = {x:[] for x in range(len(self.Vertex_list))}
+        for edge in self.EdgePoints.keys():
+            start,end = self.EdgePoints[edge]
+            adjacency_list[node_codex[start]].append((end,edge))
+            adjacency_list[node_codex[end]].append((start,edge))
+        b = [0]*len(self.Vertex_list)
+        in_degree = [0]*len(self.Vertex_list)
+        out_degree = [0]*len(self.Vertex_list)
+        M = [[0]*len(self.Vertex_list) for _ in range(len(self.Vertex_list))]
+        for vi,vf in self.EdgePoints.values():
+            out_degree[node_codex[vi]]+=1
+            in_degree[node_codex[vf]]+=1
+        for i in range(len(self.Vertex_list)):
+            # ALTERAR PARA NÓS SEM SAIDA
+            # Incoming vessels
+            if in_degree[i] == 0:
+                b[i] = PB0
+                M[i][i] = 1
+            # Exit vessels
+            elif out_degree[i] == 0:
+                b[i] = PB1
+                M[i][i] = 1
+        for i in range(1,len(self.Vertex_list)-1):
+            for neighbors,edge in adjacency_list[i]:
+                M[i][node_codex[neighbors]]+=1/self.EdgeList[edge].getResistance()
+                M[i][i]-=1/self.EdgeList[edge].getResistance()
+        node_pressure = np.linalg.solve(M,b)
+        for eid,nodes in self.EdgePoints.items():
+            ini,fin = nodes
+            self.EdgeList[eid].start.setBP(node_pressure[node_codex[ini]])
+            self.EdgeList[eid].finish.setBP(node_pressure[node_codex[fin]])
+        for key in self.EdgeList.keys():
+            Q = (self.EdgeList[key].start.getBP() - self.EdgeList[key].finish.getBP())/self.EdgeList[key].getResistance()
+            if Q < 0:
+                vi,vf = self.EdgePoints[key]
+                self.EdgePoints[key] = [vf,vi]
+            self.EdgeList[key].setFlux(Q)
 
 #####################
 ##### Functions #####
 #####################
+
+def updateConstants(new_val):
+    global K
+    global speed_const
+    K = new_val
+    speed_const = 1/K
 
 def A_matrix():
     k1 = np.zeros((Nx,Ny,Nz))
@@ -136,9 +194,9 @@ def oxygenFlux(Po,net:Network):
         S[vessel.finish.getCoord()] = speed_const*(vessel.finish.getPressure() - Po[vessel.finish.getCoord()])
     return S
 
-def SteadyState(S,net:Network,edge_order, A):
+def SteadyState(S,net:Network, A):
     s_hat = S.copy()
-    for eid in edge_order:
+    for eid in net.EdgeList.keys():
         vaso = net.EdgeList[eid]
         vaso_old = vaso.start
         for node in vaso.centerline:
@@ -152,9 +210,8 @@ def SteadyState(S,net:Network,edge_order, A):
     pf_n = np.real(ifftn(pf_n))
     return pf_n
 
-def updateFlow(S,net:Network,edge_order):
-    for eid in edge_order:
-        vaso = net.EdgeList[eid]
+def updateEntrance(net:Network):
+    for vaso in net.EdgeList.values():
         n_fathers = len(vaso.fathers)
         # HANDLE INPUT FROM vaso.start
         # IF vaso.start.father = 0 THEN vaso.start.setPressure(P0)
@@ -166,10 +223,14 @@ def updateFlow(S,net:Network,edge_order):
             fid = vaso.fathers[0]
             vaso.start.setPressure(net.EdgeList[fid].finish.getPressure())
             vaso.start.setFlow(flux(vaso.start.getPressure(),vaso))
+            # f entrada = f saida caudal entrada/caudal saida
         # If vaso.start.father > 1 THEN vaso.start.setFlow(sum(vaso.start.father.getFlow()))
         else:
             vaso.start.setFlow(sum([net.EdgeList[i].finish.getFlow() for i in vaso.fathers]))
             vaso.start.setPressure(secantMethod(flux,0,P0,vaso,vaso.start.getFlow()))
+
+def updateFlow(S,net:Network):
+    for vaso in net.EdgeList.values():
         vaso_old = vaso.start
         for node in vaso.centerline:
             d_step = [y-x for x,y in zip(vaso_old.getCoord(),node.getCoord())]
@@ -272,6 +333,47 @@ def generatePictures(Po,S,net,K,i):
         plt.savefig(f"Images/{eid}_{K}_{i}_plots.png")
     #    plt.show()
         plt.close("all")
+
+def generatePictures1(Po,S,net,K,i,eid):
+    vasos = net.EdgeList[eid]
+    x_range = []
+    vaso_old = vasos.start
+    for node in vasos.centerline:
+        d_step = [y-x for x,y in zip(vaso_old.getCoord(),node.getCoord())]
+        x_range.append(np.sqrt(np.sum(np.power(np.array(d_step)*np.array([d_x,d_y,d_z]),2))))
+        vaso_old = node
+    d_step = [y-x for x,y in zip(vaso_old.getCoord(),vasos.finish.getCoord())]
+    x_range.append(np.sqrt(np.sum(np.power(np.array(d_step)*np.array([d_x,d_y,d_z]),2))))
+    x_range = np.array([0,*np.cumsum(x_range)])
+    coord = [vasos.start.getCoord(),*vasos.getCoord(),vasos.finish.getCoord()]
+    coord = (np.array([x[0] for x in coord]),np.array([x[1] for x in coord]),np.array([x[2] for x in coord]))
+    # Po
+    plt.subplot(2,2,1)
+    plt.plot(x_range,Po[coord])
+    plt.title(f"Po - Tissue Oxygen - {eid}")
+    # Pb
+    Pb = [vasos.start.getPressure()]
+    Pb.extend([x.getPressure() for x in vasos.centerline])
+    Pb.append(vasos.finish.getPressure())
+    plt.subplot(2,2,2)
+    plt.plot(x_range,Pb)
+    plt.title(f"Pb - Blood Oxygen - {eid}")
+    # S
+    plt.subplot(2,2,3)
+    plt.plot(x_range,S[coord])
+    plt.title(f"S - Source - {eid}")
+    # f
+    flow = [vasos.start.getFlow(),*[x.getFlow() for x in vasos.centerline],vasos.finish.getFlow()]
+    plt.subplot(2,2,4)
+    plt.plot(x_range,flow)
+    plt.title(f"f - Oxygen Flux - {eid}")
+    #df/ds
+    dfds = [0,*[(flow[i]-flow[i+1])/(x_range[i+1]-x_range[i]) for i in range(len(x_range)-1)]]
+    plt.subplot(2,2,3)
+    plt.plot(x_range,dfds)
+    plt.savefig(f"Images/{eid}_{K}_{i}_plots.png")
+#    plt.show()
+    plt.close("all")
 
 def save_vti_file(phi, nx, ny, nz, name):    
     pc_real = phi.real #+ psi.real

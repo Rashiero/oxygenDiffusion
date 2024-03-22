@@ -1,3 +1,4 @@
+import numpy as np
 ######################
 ##### Parameters #####
 ######################
@@ -19,7 +20,8 @@ d_z = Lz/Nz # Lz
 n_print = 1000
 
 ##### Constants #####
-K = 3e9 # mmHg cm s/ cm**2 O2 2.58 (3e8-9.3e7)
+K = np.longfloat(1.2e10)
+# K = 3e9 # mmHg cm s/ cm**2 O2 2.58 (3e8-9.3e7)
 speed_const = 1/K # cm**3 O2 / mmHg um s
 oxygen_degradation = 1e-2/60 # cm**3 O2 / cm**3 s mmHg <- (0.5-2.5)
 D = 6e-10 # 6e-14 cm**3 O2 / um s mmHg
