@@ -1,4 +1,5 @@
 from modules import *
+import imageio.v2 as imageio
 
 ##### Teste #####
 error_dict = {}
@@ -50,8 +51,8 @@ while K >= 3e8:
     S = oxygenFlux(Po,VesselNetwork)
     error_dict[str(K)] = {"err":[],"alfafa":[]}
 
-    while err > 1e-4 and not np.isclose(err/prev_err,1):
-        alfafa = 0.5*100/(100+i)
+    while err > 1e-4:
+        alfafa = 0.25#*100/(100+i)
         nS = S.copy()
         # Calculate Sources
         S = oxygenFlux(Po,VesselNetwork)
@@ -69,16 +70,20 @@ while K >= 3e8:
         # Prints and flow controls
         prev_err = err
         err = np.abs(nPo-Po).max()
+        if np.isclose(err-prev_err,0):
+            print("NOT CONVERGENT")
+            break
         error_dict[str(K)]["err"].append(err)
         error_dict[str(K)]["alfafa"].append(alfafa)
-        print(f"Iter == {i}, Erro == {err:.4e}, Atualização S == {np.abs(nS-S).max():.5e}", end="\r")
-        if i%n_print == 0:
-            getFigure(Po,"save",f"Images/{j}_{i}_O2field.png")
-            generatePictures1(Po,S,VesselNetwork,j,i,'e21')
+        print(f"Iter == {i}, Erro == {err:.4e}, Atualização S == {np.abs(nS-S).max():.5e}\r", end = "")
+#        generatePictures_vessel(Po,S,VesselNetwork,j,i,'e21')
+#        if i%n_print == 0:
+#            getFigure(Po,"save",f"Images/{j}_{i}_O2field.png")
         i+=1
     print("")
     j+=1
     K-=2*10**(int(np.log10(K))-1)
+#    K-=0.2*K
     updateConstants(K)
 
 save_vti_file(Po,Nx,Ny,Nz,"Tissue_Oxygen_Pressure")

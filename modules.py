@@ -213,18 +213,14 @@ def SteadyState(S,net:Network, A):
 def updateEntrance(net:Network):
     for vaso in net.EdgeList.values():
         n_fathers = len(vaso.fathers)
-        # HANDLE INPUT FROM vaso.start
-        # IF vaso.start.father = 0 THEN vaso.start.setPressure(P0)
         if n_fathers == 0:
             vaso.start.setPressure(P0)
             vaso.start.setFlow(flux(P0,vaso))
-        # If vaso.start.father = 1 THEN vaso.start.setPressure(vaso.start.father.getPressure())
         elif n_fathers == 1:
             fid = vaso.fathers[0]
             vaso.start.setPressure(net.EdgeList[fid].finish.getPressure())
             vaso.start.setFlow(flux(vaso.start.getPressure(),vaso))
             # f entrada = f saida caudal entrada/caudal saida
-        # If vaso.start.father > 1 THEN vaso.start.setFlow(sum(vaso.start.father.getFlow()))
         else:
             vaso.start.setFlow(sum([net.EdgeList[i].finish.getFlow() for i in vaso.fathers]))
             vaso.start.setPressure(secantMethod(flux,0,P0,vaso,vaso.start.getFlow()))
@@ -334,7 +330,7 @@ def generatePictures(Po,S,net,K,i):
     #    plt.show()
         plt.close("all")
 
-def generatePictures1(Po,S,net,K,i,eid):
+def generatePictures_vessel(Po,S,net,K,i,eid):
     vasos = net.EdgeList[eid]
     x_range = []
     vaso_old = vasos.start
@@ -368,9 +364,14 @@ def generatePictures1(Po,S,net,K,i,eid):
     plt.plot(x_range,flow)
     plt.title(f"f - Oxygen Flux - {eid}")
     #df/ds
-    dfds = [0,*[(flow[i]-flow[i+1])/(x_range[i+1]-x_range[i]) for i in range(len(x_range)-1)]]
+    dfds = [(flow[i]-flow[i+1])/(x_range[i+1]-x_range[i]) for i in range(len(x_range)-1)]
+    dfds.append(dfds[-1])
     plt.subplot(2,2,3)
     plt.plot(x_range,dfds)
+    plt.subplot(2,2,2)
+    plt.plot(x_range,Po[coord])
+    plt.subplot(2,2,4)
+    plt.plot(x_range,[flux(P0,vasos)]*len(x_range))
     plt.savefig(f"Images/{eid}_{K}_{i}_plots.png")
 #    plt.show()
     plt.close("all")

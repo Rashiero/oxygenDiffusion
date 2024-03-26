@@ -20,7 +20,7 @@ d_z = Lz/Nz # Lz
 n_print = 1000
 
 ##### Constants #####
-K = np.longfloat(1.2e10)
+K = np.longfloat(8e9)
 # K = 3e9 # mmHg cm s/ cm**2 O2 2.58 (3e8-9.3e7)
 speed_const = 1/K # cm**3 O2 / mmHg um s
 oxygen_degradation = 1e-2/60 # cm**3 O2 / cm**3 s mmHg <- (0.5-2.5)
