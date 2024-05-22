@@ -183,15 +183,19 @@ def A_matrix():
     return k
 
 def flux(Pb,vaso:Vessel):
-    return vaso.Q*(Hd*Co*(Pb**n/(Pb**n+P50**n))+alfa*Pb)
+    return vaso.getFlux()*(Hd*Co*(Pb**n/(Pb**n+P50**n))+alfa*Pb)
 
 def oxygenFlux(Po,net:Network):
     S = np.zeros((Nx,Ny,Nz))
     for vessel in net.EdgeList.values():
         for point in vessel.centerline:
             indexes = point.getCoord()
-            S[indexes] = speed_const*(point.getPressure() - Po[indexes])
-        S[vessel.finish.getCoord()] = speed_const*(vessel.finish.getPressure() - Po[vessel.finish.getCoord()])
+            new_val = (point.getPressure() - Po[indexes])/K
+            S[indexes] = new_val if new_val > 0 else 0
+        new_val = (vessel.finish.getPressure() - Po[vessel.finish.getCoord()])/K
+        S[vessel.finish.getCoord()] = new_val if new_val > 0 else 0
+#            S[indexes] = speed_const*(point.getPressure() - Po[indexes])
+#        S[vessel.finish.getCoord()] = speed_const*(vessel.finish.getPressure() - Po[vessel.finish.getCoord()])
     return S
 
 def SteadyState(S,net:Network, A):
@@ -225,30 +229,42 @@ def updateEntrance(net:Network):
             vaso.start.setFlow(sum([net.EdgeList[i].finish.getFlow() for i in vaso.fathers]))
             vaso.start.setPressure(secantMethod(flux,0,P0,vaso,vaso.start.getFlow()))
 
-def updateFlow(S,net:Network):
+def updateFlow(S,net:Network):#,Po):
     for vaso in net.EdgeList.values():
         vaso_old = vaso.start
         for node in vaso.centerline:
             d_step = [y-x for x,y in zip(vaso_old.getCoord(),node.getCoord())]
             ds = np.sqrt(np.sum(np.power(np.array(d_step)*np.array([d_x,d_y,d_z]),2)))
             node.F = vaso_old.getFlow() - S[vaso_old.getCoord()]*ds
+#            if node.F < 0:
+#                node.F = 0
+#                node.setPressure(Po[node.getCoord()])
             node.F = node.F if node.F >=0 else 0
             vaso_old = node
         d_step = [y-x for x,y in zip(vaso_old.getCoord(),vaso.finish.getCoord())]
         ds = np.sqrt(np.sum(np.power(np.array(d_step)*np.array([d_x,d_y,d_z]),2)))
         vaso.finish.F = vaso_old.getFlow() - S[vaso_old.getCoord()]*ds
+#        if vaso.finish.F < 0:
+#            vaso.finish.F = 0
+#            vaso.finish.setPressure(Po[vaso.finish.getCoord()])
         vaso.finish.F = vaso.finish.F if vaso.finish.F >=0 else 0
 
-def setPb(net:Network):
+def setPb(net:Network,Po):
     for eid,Vaso in net.EdgeList.items():
         for node in Vaso.centerline:
-            try:
-                node.setPressure(secantMethod(flux,0,P0,Vaso,val=node.getFlow()))
-            except:
-                print(f"{eid} - {node}")
-                print(f"FAILED FOR FAILURE NODE WITH PRESSURE {node.getPressure()} AND FLOW {node.getFlow()}")
-                raise Exception("PRESSURE FAIL")
-        Vaso.finish.setPressure(secantMethod(flux,0,P0,Vaso,val = Vaso.finish.getFlow()))
+            if node.getFlow() == 0:
+                node.setPressure(Po[node.getCoord()])
+            else:
+                try:
+                    node.setPressure(secantMethod(flux,0,P0,Vaso,val=node.getFlow()))
+                except:
+                    print(f"{eid} - {node}")
+                    print(f"FAILED FOR FAILURE NODE WITH PRESSURE {node.getPressure()} AND FLOW {node.getFlow()}")
+                    raise Exception("PRESSURE FAIL")
+        if Vaso.finish.getFlow() == 0:
+            Vaso.finish.setPressure(Po[Vaso.finish.getCoord()])
+        else:
+            Vaso.finish.setPressure(secantMethod(flux,0,P0,Vaso,val = Vaso.finish.getFlow()))
 
 def secantMethod(func,x1,x2,params,val = 0, xacc = .6):
     MAX_ITER = 50
