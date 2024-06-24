@@ -60,16 +60,16 @@ for ix in range(Nx):
 
 Search_space = KNN.copy()
 
+queue = []
 for V,coord in network["Node_list"].items():
     ix,iy,iz = coord
     if KNN[ix,iy,iz] == 1:
-        starting_vertex = V
-        break
+        queue.append(V)
 
 current_edge = 0
 checked_nodes = 0
 full_nodes = len(network["Node_list"])
-queue = [starting_vertex]
+starting_vertex = queue[0]
 while queue:
     v = queue.pop(0)
     checked_nodes+=1
@@ -109,5 +109,5 @@ while queue:
 
 
 
-with open("network_trial.json",'w') as f:
+with open("network_trial2.json",'w') as f:
     json.dump(network,f)
