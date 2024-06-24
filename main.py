@@ -4,9 +4,9 @@ import copy
 ##### Teste #####
 error_dict = {}
 alfafa = 0.25
-
+fname = "P8_Segmented"
 ##### Build World #####
-VesselNetwork = Network("network.json")
+VesselNetwork = Network(f"{fname}_final_network.json")
 Po = np.zeros((Nx,Ny,Nz))
 S = np.zeros((Nx,Ny,Nz))
 A = A_matrix()
@@ -21,7 +21,26 @@ VesselNetwork.setLengths()
 VesselNetwork.setResistances()
 
 # Calculate Fluxes
-VesselNetwork.setFluxes()
+
+in_nodes = []
+out_nodes = []
+for key in VesselNetwork.Vertex_list.keys():
+    if VesselNetwork.Vertex_list[key][0] < 2:
+        in_nodes.append(key)
+    elif VesselNetwork.Vertex_list[key][0] >= 130:
+        out_nodes.append(key)
+
+degrees = {x:0 for x in VesselNetwork.Vertex_list.keys()}
+for key in VesselNetwork.EdgePoints.keys():
+    vi,vf=VesselNetwork.EdgePoints[key]
+    degrees[vi]+=1
+    degrees[vf]+=1
+
+one_degree = [x for x,i in degrees.items() if i==1]
+in_nodes = [x for x in in_nodes if x in one_degree]
+out_nodes = [x for x in out_nodes if x in one_degree]
+
+VesselNetwork.setFluxes(in_nodes,out_nodes)
 print("Flux calculated")
 
 # Set initial conditions

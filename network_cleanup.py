@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
+import random
 
 def connected_components(adj_mat):
     nV = len(adj_mat)
@@ -318,113 +319,116 @@ def network_status(net,patterns,fname = 'print'):
         with open(fname,'w') as f:
             f.write(out_buffer)
 
-fname = "P8_Segmented"
-with open(f'{fname}_primary_network.json','r') as f:
-    network = json.load(f)
+def main():
+    fname = "P8_Segmented"
+    with open(f'{fname}_primary_network.json','r') as f:
+        network = json.load(f)
 
-m_size,key_list,key_map,map_key = network_ids(network)
+    m_size,key_list,key_map,map_key = network_ids(network)
 
-perc_tot = m_size**2/2
-perc_count = 0
-dist_m = np.zeros((m_size,m_size))
-for i in range(m_size):
-    for j in range(i,m_size):
-        dist_m[i,j] = np.sqrt(np.sum([(x-y)**2 for x,y in zip(network['Node_list'][key_list[i]],network['Node_list'][key_list[j]])]))
-        dist_m[j,i] = dist_m[i,j]
-        perc_count+=1
-        print(f'{100*perc_count/perc_tot:.2f}%',end="\r")
+    perc_tot = m_size**2/2
+    perc_count = 0
+    dist_m = np.zeros((m_size,m_size))
+    for i in range(m_size):
+        for j in range(i,m_size):
+            dist_m[i,j] = np.sqrt(np.sum([(x-y)**2 for x,y in zip(network['Node_list'][key_list[i]],network['Node_list'][key_list[j]])]))
+            dist_m[j,i] = dist_m[i,j]
+            perc_count+=1
+            print(f'{100*perc_count/perc_tot:.2f}%',end="\r")
 
-print("Distances Calculated")
+    print("Distances Calculated")
 
-adj_mat = dist_m.copy()
-adj_mat[adj_mat<2] = 1
-for i in range(m_size):
-    adj_mat[i,i] = 0
+    adj_mat = dist_m.copy()
+    adj_mat[adj_mat<2] = 1
+    for i in range(m_size):
+        adj_mat[i,i] = 0
 
-adj_mat[adj_mat>=2] = 0
+    adj_mat[adj_mat>=2] = 0
 
-patterns = connected_components(adj_mat)
-removed_ids = alter_patterns(patterns,map_key,key_map,network,printing_flag="save",fname=fname)
-removed_ids = np.unique(removed_ids)
+    patterns = connected_components(adj_mat)
+    removed_ids = alter_patterns(patterns,map_key,key_map,network)#,printing_flag="save",fname=fname)
+    removed_ids = np.unique(removed_ids)
 
-print("Patterns Saved\nBefore Removal:")
+    print("Patterns Saved\nBefore Removal:")
 
-adj_mat = make_adjacency(network)
-degrees = degree_counts(adj_mat)
+    adj_mat = make_adjacency(network)
+    degrees = degree_counts(adj_mat)
 
-for i in removed_ids:
-    del network['Vessel_list'][i]
-    del network['centerline'][i]
+    for i in removed_ids:
+        del network['Vessel_list'][i]
+        del network['centerline'][i]
 
-print("After altering patterns (remove edges)")
-adj_mat = make_adjacency(network)
-degrees = degree_counts(adj_mat)
-m_size,key_list,key_map,map_key = network_ids(network)
+    print("After altering patterns (remove edges)")
+    adj_mat = make_adjacency(network)
+    degrees = degree_counts(adj_mat)
+    m_size,key_list,key_map,map_key = network_ids(network)
 
-merge_2_degree(network,degrees,map_key)
+    merge_2_degree(network,degrees,map_key)
 
-print("merge 2-degree nodes")
-adj_mat = make_adjacency(network)
-degrees = degree_counts(adj_mat)
-m_size,key_list,key_map,map_key = network_ids(network)
+    print("merge 2-degree nodes")
+    adj_mat = make_adjacency(network)
+    degrees = degree_counts(adj_mat)
+    m_size,key_list,key_map,map_key = network_ids(network)
 
-remove_small_vessels(network,map_key,degrees,vessel_cutoff=3)
+    remove_small_vessels(network,map_key,degrees,vessel_cutoff=3)
 
-print("After removal of nodes with degree 1 and centerline <= 3")
-adj_mat = make_adjacency(network)
-degrees = degree_counts(adj_mat)
-m_size,key_list,key_map,map_key = network_ids(network)
+    print("After removal of nodes with degree 1 and centerline <= 3")
+    adj_mat = make_adjacency(network)
+    degrees = degree_counts(adj_mat)
+    m_size,key_list,key_map,map_key = network_ids(network)
 
-merge_2_degree(network,degrees,map_key)
+    merge_2_degree(network,degrees,map_key)
 
-print("Merged new 2 degree")
-adj_mat = make_adjacency(network)
-degrees = degree_counts(adj_mat)
-m_size,key_list,key_map,map_key = network_ids(network)
+    print("Merged new 2 degree")
+    adj_mat = make_adjacency(network)
+    degrees = degree_counts(adj_mat)
+    m_size,key_list,key_map,map_key = network_ids(network)
 
-high_nodes,edge_list = offending_nodes(network,degrees,map_key)
-make_clusters(network,high_nodes,edge_list)
+    high_nodes,edge_list = offending_nodes(network,degrees,map_key)
+    make_clusters(network,high_nodes,edge_list)
 
-adj_mat = make_adjacency(network)
-degrees = degree_counts(adj_mat)
-m_size,key_list,key_map,map_key = network_ids(network)
+    adj_mat = make_adjacency(network)
+    degrees = degree_counts(adj_mat)
+    m_size,key_list,key_map,map_key = network_ids(network)
 
-for i in range(len(degrees)):
-    if degrees[i] < 4:
-        adj_mat[i] = np.zeros(m_size)
+    for i in range(len(degrees)):
+        if degrees[i] < 4:
+            adj_mat[i] = np.zeros(m_size)
 
-patterns = connected_components(adj_mat)
+    patterns = connected_components(adj_mat)
 
-print('Alter Patterns')
-removed_ids = alter_patterns(patterns,map_key,key_map,network,printing_flag="plot")
-adj_mat = make_adjacency(network)
-degrees = degree_counts(adj_mat)
-for i in removed_ids:
-    del network['Vessel_list'][i]
-    del network['centerline'][i]
+    print('Alter Patterns')
+    removed_ids = alter_patterns(patterns,map_key,key_map,network)#,printing_flag="plot")
+    adj_mat = make_adjacency(network)
+    degrees = degree_counts(adj_mat)
+    for i in removed_ids:
+        del network['Vessel_list'][i]
+        del network['centerline'][i]
 
-adj_mat = make_adjacency(network)
-degrees = degree_counts(adj_mat)
-m_size,key_list,key_map,map_key = network_ids(network)
-print('Merge 2 Degree')
-merge_2_degree(network,degrees,map_key)
-adj_mat = make_adjacency(network)
-degrees = degree_counts(adj_mat)
-m_size,key_list,key_map,map_key = network_ids(network)
+    adj_mat = make_adjacency(network)
+    degrees = degree_counts(adj_mat)
+    m_size,key_list,key_map,map_key = network_ids(network)
+    print('Merge 2 Degree')
+    merge_2_degree(network,degrees,map_key)
+    adj_mat = make_adjacency(network)
+    degrees = degree_counts(adj_mat)
+    m_size,key_list,key_map,map_key = network_ids(network)
 
-print('Remove Small Vessels')
-remove_small_vessels(network,map_key,degrees,vessel_cutoff=3)
-adj_mat = make_adjacency(network)
-degrees = degree_counts(adj_mat)
-m_size,key_list,key_map,map_key = network_ids(network)
-print('Merge 2 Degree')
-merge_2_degree(network,degrees,map_key)
-adj_mat = make_adjacency(network)
-degrees = degree_counts(adj_mat)
-m_size,key_list,key_map,map_key = network_ids(network)
+    print('Remove Small Vessels')
+    remove_small_vessels(network,map_key,degrees,vessel_cutoff=3)
+    adj_mat = make_adjacency(network)
+    degrees = degree_counts(adj_mat)
+    m_size,key_list,key_map,map_key = network_ids(network)
+    print('Merge 2 Degree')
+    merge_2_degree(network,degrees,map_key)
+    adj_mat = make_adjacency(network)
+    degrees = degree_counts(adj_mat)
+    m_size,key_list,key_map,map_key = network_ids(network)
 
-network_status(network,patterns,f"{fname}/{fname}_network_status.txt")
+#    network_status(network,patterns,f"{fname}/{fname}_network_status.txt")
 
-with open(f"{fname}/{fname}_final_network.json",'w') as f:
-    json.dump(network,f)
+    with open(f"{fname}_final_network.json",'w') as f:
+        json.dump(network,f)
 
+if __name__=="__main__":
+    main()

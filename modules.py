@@ -66,6 +66,7 @@ class Vessel():
         node = self.finish
         d_step = [y-x for x,y in zip(vaso_old.getCoord(),node.getCoord())]
         ds = np.sqrt(np.sum(np.power(np.array(d_step)*np.array([d_x,d_y,d_z]),2)))
+        length+=ds
         self.L = length    
     def setDiameter(self,diameter):
         self.D = diameter    
@@ -113,47 +114,41 @@ class Network():
     def setResistances(self):
         for vaso in self.EdgeList.values():
             vaso.setResistance(128*vaso.getLength()*mu/(np.pi*vaso.getDiameter()**4))
-    def setFluxes(self):
-        node_codex = {}
-        for i,j in zip(self.Vertex_list.keys(),range(len(self.Vertex_list))):
-            node_codex[i]=j
-        adjacency_list = {x:[] for x in range(len(self.Vertex_list))}
+    def setFluxes(self,in_nodes = [], out_nodes = []):
+        m_size = len(self.Vertex_list)
+        map_key = {i:j for i,j in zip(self.Vertex_list.keys(),range(m_size))}
+        adjacency_list = {x:[] for x in range(m_size)}
         for edge in self.EdgePoints.keys():
             start,end = self.EdgePoints[edge]
-            adjacency_list[node_codex[start]].append((end,edge))
-            adjacency_list[node_codex[end]].append((start,edge))
-        b = [0]*len(self.Vertex_list)
-        in_degree = [0]*len(self.Vertex_list)
-        out_degree = [0]*len(self.Vertex_list)
-        M = [[0]*len(self.Vertex_list) for _ in range(len(self.Vertex_list))]
-        for vi,vf in self.EdgePoints.values():
-            out_degree[node_codex[vi]]+=1
-            in_degree[node_codex[vf]]+=1
-        for i in range(len(self.Vertex_list)):
-            # ALTERAR PARA NÓS SEM SAIDA
-            # Incoming vessels
-            if in_degree[i] == 0:
-                b[i] = PB0
-                M[i][i] = 1
-            # Exit vessels
-            elif out_degree[i] == 0:
-                b[i] = PB1
-                M[i][i] = 1
-        for i in range(1,len(self.Vertex_list)-1):
-            for neighbors,edge in adjacency_list[i]:
-                M[i][node_codex[neighbors]]+=1/self.EdgeList[edge].getResistance()
-                M[i][i]-=1/self.EdgeList[edge].getResistance()
+            adjacency_list[map_key[start]].append((end,edge))
+            adjacency_list[map_key[end]].append((start,edge))
+        b = np.zeros(m_size)
+        M = np.zeros((m_size,m_size))
+        for node in in_nodes:
+            i = map_key[node]
+            b[i] = PB0
+            M[i][i] = 1
+        for node in out_nodes:
+            i = map_key[node]
+            b[i] = PB1
+            M[i][i] = 1
+        for i in range(m_size):
+            if b[i] == 0:
+                for neighbors,edge in adjacency_list[i]:
+                    M[i][map_key[neighbors]]+=1/self.EdgeList[edge].getResistance()
+                    M[i][i]-=1/self.EdgeList[edge].getResistance()
         node_pressure = np.linalg.solve(M,b)
         for eid,nodes in self.EdgePoints.items():
             ini,fin = nodes
-            self.EdgeList[eid].start.setBP(node_pressure[node_codex[ini]])
-            self.EdgeList[eid].finish.setBP(node_pressure[node_codex[fin]])
+            self.EdgeList[eid].start.setBP(node_pressure[map_key[ini]])
+            self.EdgeList[eid].finish.setBP(node_pressure[map_key[fin]])
         for key in self.EdgeList.keys():
             Q = (self.EdgeList[key].start.getBP() - self.EdgeList[key].finish.getBP())/self.EdgeList[key].getResistance()
             if Q < 0:
                 vi,vf = self.EdgePoints[key]
                 self.EdgePoints[key] = [vf,vi]
             self.EdgeList[key].setFlux(Q)
+
 
 #####################
 ##### Functions #####
