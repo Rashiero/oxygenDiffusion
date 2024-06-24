@@ -109,5 +109,5 @@ while queue:
 
 
 
-with open("network_trial2.json",'w') as f:
+with open(f"{fname}_primary_network.json",'w') as f:
     json.dump(network,f)
