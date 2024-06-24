@@ -43,7 +43,7 @@ data = clusters.copy()
 
 del clusters,freqs,selected_cluster
 
-cleaned_image = skimage.morphology.remove_small_objects(frames,min_size=100)
+cleaned_image = skimage.morphology.remove_small_objects(data,min_size=100)
 
 cleaned_image = ndi.binary_fill_holes(cleaned_image)
 
