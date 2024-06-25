@@ -147,6 +147,8 @@ class Network():
             if Q < 0:
                 vi,vf = self.EdgePoints[key]
                 self.EdgePoints[key] = [vf,vi]
+                self.EdgeList[key].start,self.EdgeList[key].finish = self.EdgeList[key].finish,self.EdgeList[key].start
+                self.EdgeList[key].centerline =  self.EdgeList[key].centerline[::-1]
             self.EdgeList[key].setFlux(Q)
 
 
