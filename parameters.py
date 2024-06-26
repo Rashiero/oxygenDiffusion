@@ -12,6 +12,10 @@ Nx = 133 # Box size => dx = x scale/Nx
 Ny = 512 # Box size => dy = y scale/Ny
 Nz = 512 # Box size => dz = z scale/Nz
 
+margin_x = 40
+margin_y = 20
+margin_z = 20
+
 Lx = 50e-4 #cm
 Ly = 50e-4 #cm
 Lz = 50e-4 #cm
@@ -24,8 +28,8 @@ d_z = Lz/Nz # Lz
 n_print = 1000
 
 ##### Constants #####
-# K = np.longfloat(8e9)
-K = np.longfloat(8e12)
+K = np.longfloat(8e9)
+#K = np.longfloat(3e12)
 # K = 3e9 # mmHg cm s/ cm**2 O2 2.58 (3e8-9.3e7)
 speed_const = 1/K # cm**3 O2 / mmHg um s
 oxygen_degradation = 1e-2/60 # cm**3 O2 / cm**3 s mmHg <- (0.5-2.5)

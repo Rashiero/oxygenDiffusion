@@ -7,8 +7,8 @@ alfafa = 0.25
 fname = "P8_Segmented"
 ##### Build World #####
 VesselNetwork = Network(f"{fname}_final_network.json")
-Po = np.zeros((Nx,Ny,Nz))
-S = np.zeros((Nx,Ny,Nz))
+Po = np.zeros((Nx+margin_x,Ny+margin_y,Nz+margin_z))
+S = np.zeros((Nx+margin_x,Ny+margin_y,Nz+margin_z))
 A = A_matrix()
 
 print("Network Built")
@@ -68,20 +68,20 @@ while err > 1e-4:
     alfafa = 0.25#*100/(100+i)
     nS = S.copy()
     # Calculate Sources
-    S = oxygenFlux(Po,VesselNetwork)
+    S = oxygenFlux(Po,VesselNetwork) # 2.5 
     S = nS + (S - nS)*alfafa
     nPo = Po.copy()
     # Calculate Steady State
-    Po = SteadyState(S,VesselNetwork,A)
+    Po = SteadyState(S,VesselNetwork,A) # 93.3 
     # Update initial pressures
-    updateEntrance(VesselNetwork)
+    updateEntrance(VesselNetwork) # 0.5 
     # Update Blood Oxygen Flow
-    updateFlow(S,VesselNetwork)
+    updateFlow(S,VesselNetwork) # 2.7
     # Update Blood Oxygen Pressure
-    setPb(VesselNetwork,Po)
-        
+    setPb(VesselNetwork,Po) # 1.0
     # Prints and flow controls
-    prev_err = err
+    if i%2==0:
+        prev_err = err
     err = np.abs(nPo-Po).max()
     if np.isclose(err-prev_err,0):
         print("NOT CONVERGENT")
@@ -96,8 +96,8 @@ print("Stabilized for first iteration")
 j = 0
 while K >= 3e8:
     step_flag = True
-    step = 0.2*K
-#    step = 2*10**(int(np.log10(K))-1)
+#    step = 0.2*K
+    step = 2*10**(int(np.log10(K))-1)
     while step_flag:
         K1 = K-step
         updateConstants(K1)
@@ -117,7 +117,8 @@ while K >= 3e8:
             updateEntrance(VN1)
             updateFlow(St,VN1)
             setPb(VN1,Pot)
-            prev_err = err
+            if i%2 == 0:
+                prev_err = err
             err = np.abs(nPo-Pot).max()
             if np.isclose(err-prev_err,0):
                 print("NOT CONVERGENT")
@@ -128,7 +129,6 @@ while K >= 3e8:
                 err1 = max(vaso_flux) if max(vaso_flux) > err1 else err1
             print(f"Iter == {i}, Erro == {err:.4e}, Atualização S == {np.abs(nS-S).max():.5e}\r", end = "")
             i+=1
-
 #        print(f"K = {K:.4e}\tK1 = {K1:.4e}\tstep = {step:.4e}\terr = {err1:.4e}\r", end = "")
         if err1 > 1.1:
 #            step-=(1-err1)/err1*step
@@ -152,7 +152,8 @@ while K >= 3e8:
         updateEntrance(VesselNetwork)
         updateFlow(S,VesselNetwork)
         setPb(VesselNetwork,Po)
-        prev_err = err
+        if i%2 == 0:
+            prev_err = err
         err = np.abs(nPo-Po).max()
         if np.isclose(err-prev_err,0):
             print("NOT CONVERGENT")
@@ -163,4 +164,4 @@ while K >= 3e8:
     print("")
 
 
-save_vti_file(Po,Nx,Ny,Nz,"Tissue_Oxygen_Pressure")
+save_vti_file(Po,Nx+margin_x,Ny+margin_y,Nz+margin_z,"Tissue_Oxygen_Pressure")

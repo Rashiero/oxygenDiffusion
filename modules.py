@@ -6,9 +6,9 @@ import json
 
 class Node():
     def __init__(self,*args):
-        self.x = args[0]
-        self.y = args[1]
-        self.z = args[2]
+        self.x = args[0] + margin_x//2
+        self.y = args[1] + margin_y//2
+        self.z = args[2] + margin_z//2
     def getCoord(self):
         return (self.x,self.y,self.z)
     def setBP(self,pressure:float):
@@ -147,8 +147,6 @@ class Network():
             if Q < 0:
                 vi,vf = self.EdgePoints[key]
                 self.EdgePoints[key] = [vf,vi]
-                self.EdgeList[key].start,self.EdgeList[key].finish = self.EdgeList[key].finish,self.EdgeList[key].start
-                self.EdgeList[key].centerline =  self.EdgeList[key].centerline[::-1]
             self.EdgeList[key].setFlux(Q)
 
 
@@ -163,15 +161,15 @@ def updateConstants(new_val):
     speed_const = 1/K
 
 def A_matrix():
-    k1 = np.zeros((Nx,Ny,Nz))
-    k2 = np.zeros((Nx,Ny,Nz))
-    k3 = np.zeros((Nx,Ny,Nz))
-    k1[:,0,0] = np.fft.fftfreq(Nx,d_x) * 2 * np.pi
-    k2[0,:,0] = np.fft.fftfreq(Ny,d_y) * 2 * np.pi
-    k3[0,0,:] = np.fft.fftfreq(Nz,d_z) * 2 * np.pi
-    for i in range(Nz):
+    k1 = np.zeros((Nx+margin_x,Ny+margin_y,Nz+margin_z))
+    k2 = np.zeros((Nx+margin_x,Ny+margin_y,Nz+margin_z))
+    k3 = np.zeros((Nx+margin_x,Ny+margin_y,Nz+margin_z))
+    k1[:,0,0] = np.fft.fftfreq(Nx+margin_x,d_x) * 2 * np.pi
+    k2[0,:,0] = np.fft.fftfreq(Ny+margin_y,d_y) * 2 * np.pi
+    k3[0,0,:] = np.fft.fftfreq(Nz+margin_z,d_z) * 2 * np.pi
+    for i in range(Nz+margin_z):
         k2[0,:,i] = k2[0,:,0]
-    for i in range(Nx):
+    for i in range(Nx+margin_x):
         k1[i,:,:] = k1[i,0,0]
         k2[i,:,:] = k2[0,:,:]
     k3[0,:,:] = k3[0,0,:]
@@ -183,7 +181,7 @@ def flux(Pb,vaso:Vessel):
     return vaso.getFlux()*(Hd*Co*(Pb**n/(Pb**n+P50**n))+alfa*Pb)
 
 def oxygenFlux(Po,net:Network):
-    S = np.zeros((Nx,Ny,Nz))
+    S = np.zeros((Nx+margin_x,Ny+margin_y,Nz+margin_z))
     for vessel in net.EdgeList.values():
         for point in vessel.centerline:
             indexes = point.getCoord()
@@ -212,18 +210,23 @@ def SteadyState(S,net:Network, A):
     return pf_n
 
 def updateEntrance(net:Network):
-    for vaso in net.EdgeList.values():
+    for key in net.EdgeList.keys():
+        vaso = net.EdgeList[key]
+#        print(f"{key} - {vaso.fathers} : Pressure: {vaso.start.getPressure()}")
+        if np.isclose(vaso.getFlux(),0,atol=1e-20):
+            vaso.start.setFlow(0.)
+            continue
         n_fathers = len(vaso.fathers)
-        if n_fathers == 0:
+        if n_fathers == 0: # MUDAR
             vaso.start.setPressure(P0)
             vaso.start.setFlow(flux(P0,vaso))
-        elif n_fathers == 1:
+        elif n_fathers == 1: # Tem caso?
             fid = vaso.fathers[0]
             vaso.start.setPressure(net.EdgeList[fid].finish.getPressure())
             vaso.start.setFlow(flux(vaso.start.getPressure(),vaso))
-            # f entrada = f saida caudal entrada/caudal saida
         else:
             vaso.start.setFlow(sum([net.EdgeList[i].finish.getFlow() for i in vaso.fathers]))
+#            print(f"For {key}: Flow = {vaso.start.getFlow()} - Pressure should be between {flux(0,vaso)} and {flux(P0,vaso)}")
             vaso.start.setPressure(secantMethod(flux,0,P0,vaso,vaso.start.getFlow()))
 
 def updateFlow(S,net:Network):#,Po):
@@ -391,13 +394,6 @@ def generatePictures_vessel(Po,S,net,K,i,eid):
 
 def save_vti_file(phi, nx, ny, nz, name):    
     pc_real = phi.real #+ psi.real
-    pc_lista_novo = []
-    for iz in range(nz):
-        for iy in range(ny):
-            for ix in range(nx):
-                t = pc_real[ix,iy,iz]
-                pc_lista_novo.append(t)
-    pc_string_novo = "    ".join([str(_) for _ in pc_lista_novo]) # criacao de uma string com os valores da lista
     with open(name + ".vti", "w" ) as my_file:
         my_file.write('<?xml version="1.0"?>')
         my_file.write('<VTKFile type="ImageData" version="0.1" byte_order="LittleEndian">\n')
@@ -406,7 +402,14 @@ def save_vti_file(phi, nx, ny, nz, name):
         my_file.write('     <CellData>\n')
         my_file.write('     <DataArray Name="scalar_data" type="Float64" format="ascii">\n')
         my_file.write('     ')
-        my_file.write(pc_string_novo)
+        for iz in range(nz):
+            pc_lista_novo = []
+            for iy in range(ny):
+                for ix in range(nx):
+                    t = pc_real[ix,iy,iz]
+                    pc_lista_novo.append(t)
+            pc_string_novo = "    ".join([str(_) for _ in pc_lista_novo]) # criacao de uma string com os valores da lista
+            my_file.write(pc_string_novo)
         my_file.write('\n         </DataArray>\n')
         my_file.write('      </CellData>\n')
         my_file.write('    </Piece>\n')
