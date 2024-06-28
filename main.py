@@ -93,11 +93,14 @@ while err > 1e-4:
 
 print("Stabilized for first iteration")
 
+# try:
+
 j = 0
-while K >= 3e8:
+while K >= 6e8:
     step_flag = True
 #    step = 0.2*K
-    step = 2*10**(int(np.log10(K))-1)
+#    step = 2*10**(int(np.log10(K))-1)
+    step = max([.2*K,2*10**(int(np.log10(K))-1)])
     while step_flag:
         K1 = K-step
         updateConstants(K1)

@@ -28,7 +28,7 @@ d_z = Lz/Nz # Lz
 n_print = 1000
 
 ##### Constants #####
-K = np.longfloat(8e9)
+K = np.longfloat(3e9)
 #K = np.longfloat(3e12)
 # K = 3e9 # mmHg cm s/ cm**2 O2 2.58 (3e8-9.3e7)
 speed_const = 1/K # cm**3 O2 / mmHg um s
