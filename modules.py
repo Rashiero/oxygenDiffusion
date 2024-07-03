@@ -209,12 +209,13 @@ def SteadyState(S,net:Network, A):
     pf_n = np.real(ifftn(pf_n))
     return pf_n
 
-def updateEntrance(net:Network):
+def updateEntrance(net:Network,Po):
     for key in net.EdgeList.keys():
         vaso = net.EdgeList[key]
 #        print(f"{key} - {vaso.fathers} : Pressure: {vaso.start.getPressure()}")
         if np.isclose(vaso.getFlux(),0,atol=1e-20):
             vaso.start.setFlow(0.)
+            vaso.start.setPressure(Po[vaso.start.getCoord()])
             continue
         n_fathers = len(vaso.fathers)
         if n_fathers == 0: # MUDAR

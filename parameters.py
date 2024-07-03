@@ -8,6 +8,12 @@ import numpy as np
 # Ny = 100 # Box size => dy = y scale/Ny
 # Nz = 100 # Box size => dz = z scale/Nz
 
+# Nx = 133 #P8_Segmented
+# Nx = 190 #P9_Segmented
+# Nx = 217 #P10_Segmented
+# Nx = 250 #P11_Segmented
+# Nx = 257 #P12_Segmented
+
 Nx = 133 # Box size => dx = x scale/Nx
 Ny = 512 # Box size => dy = y scale/Ny
 Nz = 512 # Box size => dz = z scale/Nz
@@ -29,6 +35,7 @@ n_print = 1000
 
 ##### Constants #####
 K = np.longfloat(3e9)
+K_goal = np.longfloat(3e8)
 #K = np.longfloat(3e12)
 # K = 3e9 # mmHg cm s/ cm**2 O2 2.58 (3e8-9.3e7)
 speed_const = 1/K # cm**3 O2 / mmHg um s

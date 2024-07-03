@@ -1,8 +1,9 @@
 from modules import *
 import copy
+import pickle
 
 ##### Teste #####
-error_dict = {}
+flag_break = False
 alfafa = 0.25
 fname = "P8_Segmented"
 ##### Build World #####
@@ -21,7 +22,6 @@ VesselNetwork.setLengths()
 VesselNetwork.setResistances()
 
 # Calculate Fluxes
-
 in_nodes = []
 out_nodes = []
 for key in VesselNetwork.Vertex_list.keys():
@@ -62,10 +62,9 @@ VesselNetwork.setFathers()
 err = 2e-3
 prev_err = 3e-3
 i = 0
-error_dict[str(K)] = {"err":[],"alfafa":[]}
 print(f"K = {K:e} gamma = {speed_const:e}")
 while err > 1e-4:
-    alfafa = 0.25#*100/(100+i)
+    # alfafa = 0.25#*100/(100+i)
     nS = S.copy()
     # Calculate Sources
     S = oxygenFlux(Po,VesselNetwork) # 2.5 
@@ -74,97 +73,83 @@ while err > 1e-4:
     # Calculate Steady State
     Po = SteadyState(S,VesselNetwork,A) # 93.3 
     # Update initial pressures
-    updateEntrance(VesselNetwork) # 0.5 
+    updateEntrance(VesselNetwork,Po) # 0.5 
     # Update Blood Oxygen Flow
     updateFlow(S,VesselNetwork) # 2.7
     # Update Blood Oxygen Pressure
     setPb(VesselNetwork,Po) # 1.0
     # Prints and flow controls
-    if i%2==0:
+    if i%2==0: #Oscilations: compare to previous-1
         prev_err = err
     err = np.abs(nPo-Po).max()
     if np.isclose(err-prev_err,0):
         print("NOT CONVERGENT")
         break
-    error_dict[str(K)]["err"].append(err)
-    error_dict[str(K)]["alfafa"].append(alfafa)
     print(f"Iter == {i}, Erro == {err:.4e}, Atualização S == {np.abs(nS-S).max():.5e}\r", end = "")
     i+=1
 
-print("Stabilized for first iteration")
+print("\nStabilized for first iteration")
 
-# try:
-
-j = 0
-while K >= 6e8:
-    step_flag = True
-#    step = 0.2*K
-#    step = 2*10**(int(np.log10(K))-1)
-    step = max([.2*K,2*10**(int(np.log10(K))-1)])
-    while step_flag:
-        K1 = K-step
-        updateConstants(K1)
-        VN1 = copy.deepcopy(VesselNetwork)
-        Pot = Po.copy()
-        St = oxygenFlux(Pot,VN1)
-        err1 = 0
-        err = 2e-3
-        prev_err = 3e-3
-        i=0
-        while err > 1e-4 and err1<=1.1:
-            nS = St.copy()
+try:
+    j = 0
+    while K >= K_goal and not flag_break:
+        print(f"\nK = {K:e} gamma = {speed_const:e}")
+        step_flag = True
+    #    step = 0.2*K
+    #    step = 2*10**(int(np.log10(K))-1)
+        step = max([.2*K,2*10**(int(np.log10(K))-1)])
+        while step_flag:
+            K1 = K-step
+            updateConstants(K1)
+            VN1 = copy.deepcopy(VesselNetwork)
+            Pot = Po.copy()
             St = oxygenFlux(Pot,VN1)
-            St = nS + (St - nS)*alfafa
-            nPo = Pot.copy()
-            Pot = SteadyState(St,VN1,A)
-            updateEntrance(VN1)
-            updateFlow(St,VN1)
-            setPb(VN1,Pot)
-            if i%2 == 0:
+            err1 = 0
+            err = 2e-3
+            prev_err = 3e-3
+            i=0
+            while err > 1e-4 and err1<=1.1:
+                nS = St.copy()
+                St = oxygenFlux(Pot,VN1)
+                St = nS + (St - nS)*alfafa
+                nPo = Pot.copy()
+                Pot = SteadyState(St,VN1,A)
+                updateEntrance(VN1,Pot)
+                updateFlow(St,VN1)
+                setPb(VN1,Pot)
                 prev_err = err
-            err = np.abs(nPo-Pot).max()
-            if np.isclose(err-prev_err,0):
-                print("NOT CONVERGENT")
-                break
-            for vaso in VN1.EdgeList.values():
-                max_flux = flux(P0,vaso)
-                vaso_flux = [vaso.start.getFlow()/max_flux,*[x.getFlow()/max_flux for x in vaso.centerline],vaso.finish.getFlow()/max_flux]
-                err1 = max(vaso_flux) if max(vaso_flux) > err1 else err1
-            print(f"Iter == {i}, Erro == {err:.4e}, Atualização S == {np.abs(nS-S).max():.5e}\r", end = "")
-            i+=1
-#        print(f"K = {K:.4e}\tK1 = {K1:.4e}\tstep = {step:.4e}\terr = {err1:.4e}\r", end = "")
-        if err1 > 1.1:
-#            step-=(1-err1)/err1*step
-            step/=err1
-        else:
-            step_flag = False
-    print("")
-    K-=step
-    updateConstants(K)
-    print(f"K = {K:e} gamma = {speed_const:e}")
-    err = 2e-3
-    prev_err = 3e-3
-    i = 0
-    S = oxygenFlux(Po,VesselNetwork)
-    while err > 1e-4:
-        nS = S.copy()
-        S = oxygenFlux(Po,VesselNetwork)
-        S = nS + (S - nS)*alfafa
-        nPo = Po.copy()
-        Po = SteadyState(S,VesselNetwork,A)
-        updateEntrance(VesselNetwork)
-        updateFlow(S,VesselNetwork)
-        setPb(VesselNetwork,Po)
-        if i%2 == 0:
-            prev_err = err
-        err = np.abs(nPo-Po).max()
-        if np.isclose(err-prev_err,0):
-            print("NOT CONVERGENT")
-            break
-        print(f"Iter == {i}, Erro == {err:.4e}, Atualização S == {np.abs(nS-S).max():.5e}\r", end = "")
-        i+=1
-    j+=1
-    print("")
+                err = np.abs(nPo-Pot).max()
+                if np.isclose(err-prev_err,0,atol = 1e-5) and err > 1e-3:
+                    print("")
+                    print("NOT CONVERGENT")
+                    if err > 10:
+                        flag_break = True
+                    break
+                for vaso in VN1.EdgeList.values():
+                    max_flux = flux(P0,vaso)
+                    vaso_flux = [vaso.start.getFlow()/max_flux,*[x.getFlow()/max_flux for x in vaso.centerline],vaso.finish.getFlow()/max_flux]
+                    err1 = max(vaso_flux) if max(vaso_flux) > err1 else err1
+                print(f"Iter == {i}, Erro == {err:.4e}, Atualização S == {np.abs(nS-S).max():.5e}\r", end = "")
+                i+=1
+    #        print(f"K = {K:.4e}\tK1 = {K1:.4e}\tstep = {step:.4e}\terr = {err1:.4e}\r", end = "")
+            if err1 > 1.1:
+    #            step-=(1-err1)/err1*step
+                step/=err1
+            else:
+                K-=step
+                updateConstants(K)
+                Po = Pot.copy()
+                VesselNetwork = copy.deepcopy(VN1)
+                step_flag = False
+        j+=1
+        print("")
 
-
-save_vti_file(Po,Nx+margin_x,Ny+margin_y,Nz+margin_z,"Tissue_Oxygen_Pressure")
+finally:
+    print("Saving Network")
+    with open(f"{fname}_Network.obj","wb")  as f:
+        pickle.dump(VesselNetwork,f)
+    # print("Saving Errors")
+    # with open(f"{fname}_error.json","w") as f:
+    #     json.dump(error_dict,f)
+    print("Saving Tissue Pressure")
+    save_vti_file(Po,Nx+margin_x,Ny+margin_y,Nz+margin_z,"Tissue_Oxygen_Pressure")
