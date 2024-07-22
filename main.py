@@ -1,11 +1,13 @@
 from modules import *
 import copy
 import pickle
+import sys
 
 ##### Teste #####
 flag_break = False
 alfafa = 0.25
-fname = "P8_Segmented"
+# fname = "P8_Segmented"
+fname = sys.argv[1]
 ##### Build World #####
 VesselNetwork = Network(f"{fname}_final_network.json")
 Po = np.zeros((Nx+margin_x,Ny+margin_y,Nz+margin_z))
@@ -122,7 +124,7 @@ try:
                 if np.isclose(err-prev_err,0,atol = 1e-5) and err > 1e-3:
                     print("")
                     print("NOT CONVERGENT")
-                    if err > 10:
+                    if err > 1:
                         flag_break = True
                     break
                 for vaso in VN1.EdgeList.values():
@@ -141,6 +143,11 @@ try:
                 Po = Pot.copy()
                 VesselNetwork = copy.deepcopy(VN1)
                 step_flag = False
+#                print("Saving Network")
+#                with open(f"{fname}_{j}_Network.obj","wb")  as f:
+#                    pickle.dump(VesselNetwork,f)
+#                print("Saving Tissue Pressure")
+#                save_vti_file(Po,Nx+margin_x,Ny+margin_y,Nz+margin_z,f"{fname}_{j}_Tissue_Oxygen_Pressure")
         j+=1
         print("")
 
@@ -152,4 +159,4 @@ finally:
     # with open(f"{fname}_error.json","w") as f:
     #     json.dump(error_dict,f)
     print("Saving Tissue Pressure")
-    save_vti_file(Po,Nx+margin_x,Ny+margin_y,Nz+margin_z,"Tissue_Oxygen_Pressure")
+    save_vti_file(Po,Nx+margin_x,Ny+margin_y,Nz+margin_z,f"{fname}_Tissue_Oxygen_Pressure")

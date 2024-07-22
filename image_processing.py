@@ -2,6 +2,7 @@ from PIL import Image,ImageSequence
 import skimage
 import numpy as np
 import scipy.ndimage as ndi
+import sys
 
 def cleaning_process(incoming,cycle = 4):
     image = incoming.copy()
@@ -18,7 +19,8 @@ def cleaning_process(incoming,cycle = 4):
 def main():
     # Raw data
     data = []
-    fname = 'P8_Segmented'
+#    fname = 'P8_Segmented'
+    fname = sys.argv[1]
     im = Image.open("Data/"+fname+".tif")
     for i in ImageSequence.Iterator(im):
         data.append(np.array(i))

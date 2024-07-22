@@ -13,23 +13,35 @@ import numpy as np
 # Nx = 217 #P10_Segmented
 # Nx = 250 #P11_Segmented
 # Nx = 257 #P12_Segmented
-
-Nx = 133 # Box size => dx = x scale/Nx
-Ny = 512 # Box size => dy = y scale/Ny
-Nz = 512 # Box size => dz = z scale/Nz
+Ny = 512
+Nz = 512
 
 margin_x = 40
 margin_y = 20
 margin_z = 20
 
-Lx = 50e-4 #cm
-Ly = 50e-4 #cm
-Lz = 50e-4 #cm
+# Lx = 50e-4 #cm
+# Ly = 50e-4 #cm
+# Lz = 50e-4 #cm
 
+'''
+<PVStateValue key="micronsPerPixel">
+<IndexedValue index="XAxis" value="0.768008424418941"/>
+<IndexedValue index="YAxis" value="0.768008424418941"/>
+<IndexedValue index="ZAxis" value="1"/>
+'''
+
+d_x = 1e-4
+d_y = 0.768008424418941e-4
+d_z = 0.768008424418941e-4
+
+Lx = d_x*Nx
+Ly = d_y*Ny
+Lz = d_z*Nz
 ##### Integration Steps #####
-d_x = Lx/Nx # Lx
-d_y = Ly/Ny # Ly
-d_z = Lz/Nz # Lz
+# d_x = Lx/Nx # Lx
+# d_y = Ly/Ny # Ly
+# d_z = Lz/Nz # Lz
 
 n_print = 1000
 

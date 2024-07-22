@@ -4,6 +4,7 @@ import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
 import random
+import sys
 
 def connected_components(adj_mat):
     nV = len(adj_mat)
@@ -320,7 +321,8 @@ def network_status(net,patterns,fname = 'print'):
             f.write(out_buffer)
 
 def main():
-    fname = "P8_Segmented"
+#    fname = "P8_Segmented"
+    fname = sys.argv[1]
     with open(f'{fname}_primary_network.json','r') as f:
         network = json.load(f)
 

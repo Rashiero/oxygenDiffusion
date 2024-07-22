@@ -1,7 +1,7 @@
 from PIL import Image,ImageSequence
 import numpy as np
 import json
-
+import sys
 
 def neighborhood(data,ix,iy,iz,Nx,Ny,Nz,step = 1):
     neigh = []
@@ -16,7 +16,8 @@ def main():
     flag = True
     # data
     data = []
-    fname = 'P8_Segmented'
+#    fname = 'P8_Segmented'
+    fname = sys.argv[1]
     im = Image.open(fname+"_skeleton.tif")
     for i in ImageSequence.Iterator(im):
         data.append(np.array(i))
