@@ -1,10 +1,11 @@
 import json
 from PIL import Image,ImageSequence
 import numpy as np
+import sys
 
 def main():
     # Scope
-    fname = "P8_Segmented"
+    fname = sys.argv[1]
     # Network
     with open(f"{fname}_final_network.json","r") as f:
         network = json.load(f)
