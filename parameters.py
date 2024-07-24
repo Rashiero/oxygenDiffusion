@@ -20,10 +20,6 @@ margin_x = 40
 margin_y = 20
 margin_z = 20
 
-# Lx = 50e-4 #cm
-# Ly = 50e-4 #cm
-# Lz = 50e-4 #cm
-
 '''
 <PVStateValue key="micronsPerPixel">
 <IndexedValue index="XAxis" value="0.768008424418941"/>
@@ -39,6 +35,10 @@ Lx = d_x*Nx
 Ly = d_y*Ny
 Lz = d_z*Nz
 ##### Integration Steps #####
+# Lx = 50e-4 #cm
+# Ly = 50e-4 #cm
+# Lz = 50e-4 #cm
+
 # d_x = Lx/Nx # Lx
 # d_y = Ly/Ny # Ly
 # d_z = Lz/Nz # Lz
@@ -46,7 +46,7 @@ Lz = d_z*Nz
 n_print = 1000
 
 ##### Constants #####
-K = np.longfloat(3e9)
+K = np.longfloat(6e9)
 K_goal = np.longfloat(3e8)
 #K = np.longfloat(3e12)
 # K = 3e9 # mmHg cm s/ cm**2 O2 2.58 (3e8-9.3e7)

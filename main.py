@@ -107,6 +107,7 @@ try:
             Pot = Po.copy()
             St = oxygenFlux(Pot,VN1)
             err1 = 0
+            mean_err = 0
             err = 2e-3
             prev_err = 3e-3
             i=0
@@ -121,7 +122,9 @@ try:
                 setPb(VN1,Pot)
                 prev_err = err
                 err = np.abs(nPo-Pot).max()
-                if np.isclose(err-prev_err,0,atol = 1e-5) and err > 1e-3:
+                err_update = (err-mean_err)/(i+1)
+                mean_err+=err_update
+                if np.isclose(err_update,0,atol = max(1e-4,10**(np.floor(np.log10(mean_err)-2)))):
                     print("")
                     print("NOT CONVERGENT")
                     if err > 1:
@@ -131,7 +134,7 @@ try:
                     max_flux = flux(P0,vaso)
                     vaso_flux = [vaso.start.getFlow()/max_flux,*[x.getFlow()/max_flux for x in vaso.centerline],vaso.finish.getFlow()/max_flux]
                     err1 = max(vaso_flux) if max(vaso_flux) > err1 else err1
-                print(f"Iter == {i}, Erro == {err:.4e}, Atualização S == {np.abs(nS-S).max():.5e}\r", end = "")
+                print(f"Iter == {i}, Erro == {err:.4e}, Erro Medio == {mean_err:.4e}, Atualização == {err_update:.5e}, tol = {10**(np.floor(np.log10(mean_err)-2)):.4e}\r", end = "")
                 i+=1
     #        print(f"K = {K:.4e}\tK1 = {K1:.4e}\tstep = {step:.4e}\terr = {err1:.4e}\r", end = "")
             if err1 > 1.1:

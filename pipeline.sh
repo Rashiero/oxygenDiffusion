@@ -2,6 +2,7 @@
 
 #####
 # This file runs all the routines required to process a microscopy image of vasculature and simulate oxygen perfusion
+# Please uncomment the file name desired to run 
 #####
 
 # filename="P8_Segmented"
@@ -46,5 +47,5 @@ python3 main.py $filename
 sed -i "/${filename}/s/^Nx/# Nx/g" parameters.py
 echo Restored parameter file
 
-mv "${filename}_skeleton.tiff" "${filename}_primary_network.json" "${filename}_final_network.json" "${filename}_Network.obj" "${filename}_Tissue_Oxygen_Pressure.vti" "${filename}_Run"
+mv "${filename}_skeleton.tif" "${filename}_primary_network.json" "${filename}_final_network.json" "${filename}_Network.obj" "${filename}_Tissue_Oxygen_Pressure.vti" "${filename}_Run"
 echo Moved all files to ${filename}_Run
