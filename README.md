@@ -1,4 +1,4 @@
-# Modelling blood flow in brain capillaries
+# Modelling Tissue Irrigation in the Neonatal Mouse Brain Cortex
 
 The following code was developed in the context of the master in computational biology for the simulation of oxygen diffusion in the brain. The code was developed by Rafael Berton Correia Ramos under the guidance of [Rui Travasso](https://biologicalmodelling.com/people/) and [Vanessa Coelho-Santos](https://www.vcoelhosantoslab.com/team). The entire process takes as input a binary segment image of brain vasculature, process the images, extract vessel information and then simulates diffusion.
 The codes developed are ment to be used in sequence and to aid in the process there is the `pipeline.sh` Bash that sequentially calls them.
